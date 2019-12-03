@@ -1,0 +1,420 @@
+---
+title: "Phase 1 Analysis"
+output: html_notebook
+---
+
+# adding required libraries
+
+```{r}
+library(plyr) #for data manipulation
+library(dplyr) #for data manipulation        
+library(qcc) #for control charts
+library(MSQC) #for maltivariate control charts
+library(FactoMineR) #for data analysis
+library(factoextra) #for data analysis
+library(xlsx) #for reading excel file
+library(ggplot2) #for visualization
+library(ggbiplot) #for visualization
+```
+
+# importing data
+```{r}
+df <- read.xlsx("C:/Data/isen-614/Project_dataset.xlsx", header=F, sheetIndex = 1)
+head(df)
+```
+
+## adding column names 
+```{r}
+for(i in 1:209){
+  names(df)[i] <- paste("Col", i)
+}
+
+head(df, 10)
+```
+
+# Principal Component Analysis
+
+## centering the data
+
+```{r}
+df.centered <- scale(df, scale = F, center = T)
+```
+
+## finding out Principal components
+
+```{r}
+pca_data <- prcomp(df.centered)
+summary(pca_data)
+```
+
+## Top 10 eigen Values and associated explained variance
+
+```{r}
+eig.val <- get_eigenvalue(pca_data)
+head(eig.val, 10)
+```
+
+# eigen Vectors of top 10 pricipal components
+
+```{r}
+pca_data$rotation[1:10, 1:10]
+```
+
+## Scree plot
+
+```{r}
+fviz_eig(pca_data, addlabels = T, ncp = 15)
+```
+
+## Pareto Chart for PCA
+
+```{r}
+PCA <- pca_data$sdev[1:10]^2
+names(PCA) <- paste("PC", c(1:10))
+pareto.chart(PCA)
+```
+
+## Plotting biplot and all variables
+
+```{r}
+ggbiplot(pca_data)
+```
+
+## Data Reduction
+
+```{r}
+# considering only 4 PCs which explain more than 80% of variance
+
+df.pca <- pca_data$x[, 1:4]
+df.pca <- as.data.frame(df.pca)
+dim(df.pca)
+```
+
+```{r}
+head(df.pca)
+```
+
+```{r}
+summary(df.pca)
+```
+
+## Visualizing Principal Components
+
+```{r}
+# PC 1
+bw1 <- 2 * IQR(df.pca$PC1) / length(df.pca$PC1)^(1/3)
+ggplot(df.pca, aes(x=PC1)) + geom_histogram(aes(y=..density..), binwidth = bw1, colour="black", fill="white") + geom_density(alpha=.2, fill="#FF6666")
+
+# PC 2
+bw2 <- 2 * IQR(df.pca$PC2) / length(df.pca$PC2)^(1/3)
+ggplot(df.pca, aes(x=PC2)) + geom_histogram(aes(y=..density..), binwidth = bw2, colour="black", fill="white") + geom_density(alpha=.2, fill="#FF6666")
+
+# PC 3
+bw3 <- 2 * IQR(df.pca$PC3) / length(df.pca$PC3)^(1/3)
+ggplot(df.pca, aes(x=PC3)) + geom_histogram(aes(y=..density..), binwidth = bw3, colour="black", fill="white") + geom_density(alpha=.2, fill="#FF6666")
+
+# PC 4
+bw4 <- 2 * IQR(df.pca$PC4) / length(df.pca$PC4)^(1/3)
+ggplot(df.pca, aes(x=PC4)) + geom_histogram(aes(y=..density..), binwidth = bw4, colour="black", fill="white") + geom_density(alpha=.2, fill="#FF6666")
+```
+
+
+## X-bar charts of top 4 Principal Components
+
+```{r}
+qcc(df.pca[,1], type = "xbar.one", data.name = "PC1")
+qcc(df.pca[,2], type = "xbar.one", data.name = "PC2")
+qcc(df.pca[,3], type = "xbar.one", data.name = "PC3")
+qcc(df.pca[,4], type = "xbar.one", data.name = "PC4")
+```
+
+# Hotelling T2 charts for Phase 1 Analysis: 1st Iteration
+
+## Cycle : 1
+
+```{r}
+T2.1.1 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.1.1$t2 > T2.1.1$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.1.1$t2 > T2.1.1$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(T2.1.1$t2 > T2.1.1$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+
+
+## Cycle : 2
+
+```{r}
+T2.1.2 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.1.2$t2 > T2.1.2$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.1.2$t2 > T2.1.2$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(T2.1.2$t2 > T2.1.2$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+
+
+
+## Cycle : 3
+
+```{r}
+T2.1.3 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.1.3$t2 > T2.1.3$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.1.3$t2 > T2.1.3$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(T2.1.3$t2 > T2.1.3$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+
+## Cycle : 4
+
+```{r}
+T2.1.4 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.1.4$t2 > T2.1.4$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.1.4$t2 > T2.1.4$ucl))))
+
+# total data points
+
+print(paste("Total remaining data points", dim(df.pca)[1]))
+```
+
+# m-CUSUM charts for Phase 1 Analysis: 1st Iteration
+
+## Cycle: 1
+```{r}
+mcusum.1.1 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.1$t2 > mcusum.1.1$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.1$t2 > mcusum.1.1$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(mcusum.1.1$t2 > mcusum.1.1$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+## Cycle: 2
+
+```{r}
+mcusum.1.2 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.2$t2 > mcusum.1.2$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.2$t2 > mcusum.1.2$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(mcusum.1.2$t2 > mcusum.1.2$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+## Cycle: 3
+
+```{r}
+mcusum.1.3 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.3$t2 > mcusum.1.3$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.3$t2 > mcusum.1.3$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(mcusum.1.3$t2 > mcusum.1.3$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+## Cycle: 4
+
+```{r}
+mcusum.1.4 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.4$t2 > mcusum.1.4$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.4$t2 > mcusum.1.4$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(mcusum.1.4$t2 > mcusum.1.4$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+## Cycle: 5
+
+```{r}
+mcusum.1.5 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.4$t2 > mcusum.1.5$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.5$t2 > mcusum.1.5$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(mcusum.1.5$t2 > mcusum.1.5$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+## Cycle: 6
+
+```{r}
+mcusum.1.6 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.1.6$t2 > mcusum.1.6$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.1.6$t2 > mcusum.1.6$ucl))))
+
+# total data points
+
+print(paste("Total remaining data points", dim(df.pca)[1]))
+```
+
+# Hotelling T2 charts for Phase 1 Analysis: 2nd Iteration
+
+## Cycle : 1
+
+```{r}
+T2.2.1 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.2.1$t2 > T2.2.1$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.2.1$t2 > T2.2.1$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(T2.2.1$t2 > T2.2.1$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+
+## Cycle : 2
+
+```{r}
+T2.2.2 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.2.2$t2 > T2.2.2$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.2.2$t2 > T2.2.2$ucl))))
+
+# removing out of control points
+df.pca <- df.pca[-which(T2.2.2$t2 > T2.2.2$ucl),]
+print(paste("Total data points after removing out of control data points: ", dim(df.pca)[1]))
+```
+
+
+## Cycle : 3
+
+```{r}
+T2.2.3 <- mult.chart(df.pca, type = "t2", alpha=0.0027, phase = 1, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(T2.2.3$t2 > T2.2.3$ucl)))) 
+print(paste("Out of control data points: ", list(which(T2.2.3$t2 > T2.2.3$ucl))))
+
+# total data points
+
+print(paste("Total remaining data points", dim(df.pca)[1]))
+```
+
+
+# m-CUSUM charts for Phase 1 Analysis: 2nd Iteration
+
+## Cycle: 1
+```{r}
+mcusum.2.1 <- mult.chart(df.pca, type = "mcusum2", alpha=0.0027, k = 1.5, h = 6, method = "sw")
+```
+
+```{r}
+# out of control points
+
+print(paste("Total out of control data points : ", length(which(mcusum.2.1$t2 > mcusum.2.1$ucl)))) 
+print(paste("Out of control data points: ", list(which(mcusum.2.1$t2 > mcusum.2.1$ucl))))
+
+# total data points
+
+print(paste("Total remaining data points", dim(df.pca)[1]))
+```
+
+
+# Conclusion
+
+```{r}
+print(paste("Total data points in original data: ", dim(df)[1]))
+print(paste("Total data points after removing out of control data points : ", dim(df.pca)[1]))
+print(paste("Total out of control data points : ", dim(df)[1] - dim(df.pca)[1]))
+
+```
+
+## Phase II Analysis parameters:
+
+Using remaining data points we can set up a monitoring scheme for future missions. The Hotelling T2 parameters for Phase II Analysis are:
+
+```{r}
+T2 <- mult.chart(df.pca, type = "t2", alpha=0.0027, method = "sw")
+
+Xmv <- T2$Xmv
+print("Means of Principal Components:")
+Xmv
+
+S <- T2$covariance
+print("Covariance of Principal Components:")
+S
+```
+
+
+
+
+
+
+
+
+
+
+
+
